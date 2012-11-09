@@ -1,7 +1,10 @@
-(defproject exchange "1.0.0-SNAPSHOT"
-  :description "FIXME: write description"
+
+(defproject exchange "1.0.0"
+  :description "See arr-xml.org"
   :dependencies [[org.clojure/clojure "1.4.0"]
-                 [clj-oauth "1.2.10"]
+                 
                  [net.intensivesystems/conduit "0.8.1"]
-                 [org.clojars.kjw/commons-io "1.4"]
+                 
+                 [arrows-extra "1.0.0"]
+                 [org.clojure/data.xml "0.0.6"]
                  ])

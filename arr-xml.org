@@ -1,0 +1,142 @@
+*ARR-XML*
+
+* Overview
+This is an arrowized, mostly lazy, xml package following the clojure.data.xml representation.
+[:tag [:tag1 {:attr1 "hello"} "content"]]
+
+which is delivered as a seq through the arrow chain.
+
+There is heavy reliance on the accumulators and filters of arrows-extra
+#+name: use-conduit
+#+begin_src clojure
+
+(use 'conduit.core 'arrows.core 'arrows-extra.core 'clojure.data.xml)
+
+#+end_src
+
+#+RESULTS: use-conduit
+: ;;=> nil
+
+The library allows constructs such as:
+
+(a-comp (arr-select-elem "tag1") 
+        (a-all 
+         (a-comp (arr-select-elem "tag2") arr-characters) 
+         (a-comp (arr-select-elem "tag3") arr-attributes)
+         )
+)
+
+** The parsers
+The parser is lazy, and outputs the clojure.data.xml representation.
+
+#+name: parsers
+#+begin_src clojure
+
+(def-arr arr-stream-to-xml-seq [instream]
+  ":: InputStream -> [XML]"
+  (source-seq instream :coalescing false)
+
+)
+
+
+#+end_src
+
+#+RESULTS: parsers
+: ;;=> #'arr-xml.core/arr-stream-to-xml-seq
+
+** Handlers for xml-seq
+
+First, we switch by tag name - pass-through until the tag is encountered. Then send subtags down the channel.
+We implement this with arr-toggle-switch-inclusive
+*** arr-switch-elem
+#+name: arr-switch-elem
+
+#+begin_src clojure
+(defn arr-switch-elem [default-channel name channel]
+ (arr-toggle-switch-inclusive default-channel (fn[input] (and (= (:name input) name) (= (:type input) :start-element)))
+                                           (fn[input] (and (= (:name input) name) (= (:type input) :end-element)))
+                                           channel
+ )
+)
+#+end_src
+
+#+RESULTS:
+: ;;=> #'arr-xml.core/arr-switch-elem
+
+Test
+#+begin_src clojure
+
+(conduit-map (a-comp arr-stream-to-xml-seq (disperse (arr-switch-elem pass-through :there (a-arr (fn [input] (str "ch1" input)))))) [(java.io.StringReader. "<hello><there><this>is</this></there><your><friendly>newsagent</friendly></your></hello>")])
+
+#+end_src
+
+#+RESULTS:
+: ;;=> ((#clojure.data.xml.Event{:type :start-element, :name :hello, :attrs {}, :str nil} "ch1clojure.data.xml.Event@e0465d42" "ch1clojure.data.xml.Event@3a8be81a" "ch1clojure.data.xml.Event@85b46f90" "ch1clojure.data.xml.Event@10f73783" "ch1clojure.data.xml.Event@b6b1acab" #clojure.data.xml.Event{:type :start-element, :name :your, :attrs {}, :str nil} #clojure.data.xml.Event{:type :start-element, :name :friendly, :attrs {}, :str nil} #clojure.data.xml.Event{:type :characters, :name nil, :attrs nil, :str "newsagent"} #clojure.data.xml.Event{:type :end-element, :name :friendly, :attrs nil, :str nil} #clojure.data.xml.Event{:type :end-element, :name :your, :attrs nil, :str nil} #clojure.data.xml.Event{:type :end-element, :name :hello, :attrs nil, :str nil}))
+
+*** arr-select-elem
+#+name: arr-select-elem
+#+begin_src clojure
+(defn arr-select-elem [name]
+   (a-comp (arr-switch-elem name pass-through) block)
+  )
+
+
+#+end_src
+
+*** arr-attributes
+Select out the attributes map from start elements
+
+#+name: arr-attributes
+#+begin_src clojure
+(def-proc arr-attributes [input]
+  (let [attrs (:attrs input)]
+    (if attrs [attrs] [])
+    )
+  )
+
+#+end_src
+
+
+*** arr-characters
+Fire a seq of characters from the seq of xml
+#+name: arr-characters
+#+begin_src clojure
+(def-proc arr-characters [input]
+
+  (let [chars (:str input)]
+    (if chars [chars] [])
+    )
+  )
+
+#+end_src
+
+* The tangle
+
+#+begin_src clojure :tangle src/arr_xml/core.clj :noweb yes
+
+(ns arr-xml.core)
+<<use-conduit>>
+<<arr-switch-elem>>
+<<arr-select-elem>>
+<<arr-attributes>>
+<<arr-characters>>
+<<arr-parsers>>
+
+#+end_src
+
+#+RESULTS:
+: ;;=> 
+
+#+begin_src clojure :tangle project.clj
+(defproject exchange "1.0.0"
+  :description "See arr-xml.org"
+  :dependencies [[org.clojure/clojure "1.4.0"]
+                 
+                 [net.intensivesystems/conduit "0.8.1"]
+                 
+                 [arrows-extra "1.0.0"]
+                 [org.clojure/data.xml "0.0.6"]
+                 ])
+
+
+#+end_src

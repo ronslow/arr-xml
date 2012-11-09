@@ -1,0 +1,116 @@
+*ARR-XML*
+
+* Overview
+This is an arrowized, mostly lazy, xml package following the clojure.data.xml representation.
+[:tag [:tag1 {:attr1 "hello"} "content"]]
+
+which is delivered as a seq through the arrow chain.
+
+There is heavy reliance on the accumulators and filters of arrows-extra
+#+name: use-conduit
+#+begin_src clojure
+
+(use 'conduit.core 'arrows.core 'arrows-extra.core)
+
+#+end_src
+The library allows constructs such as:
+
+(a-comp (arr-select-elem "tag1") 
+        (a-all 
+         (a-comp (arr-select-elem "tag2") arr-characters) 
+         (a-comp (arr-select-elem "tag3") arr-attributes)
+         )
+)
+
+** The parsers
+Two parsers are provided. The first is lazy, and outputs the clojure.data.xml representation.
+The second loads into memory and follows the zip-xml representation which gives an xpath type syntax to access in memory
+
+#+name: parsers
+#+begin_src clojure
+(def-arr arr-stream-to-xml-seq [instream]
+  ":: InputStream -> [XML]"
+  (parse instream :coalescing false)
+
+  )
+(def-arr arr-stream-to-xml-eager [instream]
+":: InputStream -> [xml]"
+(xml/parse instream)
+  )
+
+#+end_src
+
+** Handlers for xml-seq
+
+First, we filter by tag name
+
+*** arr-select-elem
+#+name: arr-select-elem
+#+begin_src clojure
+(defn arr-select-elem [name]
+   (a-comp
+   (arr-toggle-inclusive (fn [input]
+                 (and (= (:name input) name) (= (:type input) :start-element)))
+               (fn [input]
+                 
+                (and (= (:name input) name) (= (:type input) :end-element))
+                
+                )
+               )
+   (a-select true pass-through false block)
+   )
+  )
+
+
+#+end_src
+
+*** arr-attributes
+Select out the attributes map from start elements
+
+#+name: arr-attributes
+#+begin_src clojure
+(def-proc arr-attributes [input]
+  (let [attrs (:attrs input)]
+    (if attrs [attrs] [])
+    )
+  )
+
+#+end_src
+
+
+*** arr-characters
+Fire a seq of characters from the seq of xml
+#+name: arr-characters
+#+begin_src clojure
+(def-proc arr-characters [input]
+
+  (let [chars (:str input)]
+    (if chars [chars] [])
+    )
+  )
+
+#+end_src
+
+* The tangle
+
+#+begin_src clojure :tangle src/arr-xml/core.clj :noweb yes
+
+(ns arr-xml.core)
+<<use-conduit>>
+<<arr-select-elem>>
+<<arr-attributes>>
+<<arr-characters>>
+<<arr-parsers>>
+
+#+end_src
+
+#+begin_src clojure :tangle project.clj
+(defproject exchange "1.0.0"
+  :description "See arr-xml.org"
+  :dependencies [[org.clojure/clojure "1.4.0"]
+                 [clj-oauth "1.2.10"]
+                 [net.intensivesystems/conduit "0.8.1"]
+                 [org.clojars.kjw/commons-io "1.4"]
+                 ])
+
+#+end_src
