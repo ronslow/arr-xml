@@ -29,7 +29,7 @@ The library allows constructs such as:
 ** The parsers
 The parser is lazy, and outputs the clojure.data.xml representation.
 
-#+name: parsers
+#+name: arr-parsers
 #+begin_src clojure
 
 (def-arr arr-stream-to-xml-seq [instream]
@@ -41,7 +41,7 @@ The parser is lazy, and outputs the clojure.data.xml representation.
 
 #+end_src
 
-#+RESULTS: parsers
+#+RESULTS: arr-parsers
 : ;;=> #'arr-xml.core/arr-stream-to-xml-seq
 
 ** Handlers for xml-seq
@@ -50,7 +50,6 @@ First, we switch by tag name - pass-through until the tag is encountered. Then s
 We implement this with arr-toggle-switch-inclusive
 *** arr-switch-elem
 #+name: arr-switch-elem
-
 #+begin_src clojure
 (defn arr-switch-elem [default-channel name channel]
  (arr-toggle-switch-inclusive default-channel (fn[input] (and (= (:name input) name) (= (:type input) :start-element)))
