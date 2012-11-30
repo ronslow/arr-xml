@@ -3,16 +3,21 @@
 
 (use 'conduit.core 'arrows.core 'arrows-extra.core 'clojure.data.xml)
 
-(defn arr-switch-elem [default-channel name channel]
- (arr-toggle-switch-inclusive default-channel (fn[input] (and (= (:name input) name) (= (:type input) :start-element)))
+(defn arr-switch-elem [default-channel name channel & more]
+ (arr-toggle-switch-inclusive (if (empty? more) default-channel (apply (partial arr-switch-elem default-channel) more)) (fn[input] (and (= (:name input) name) (= (:type input) :start-element)))
                                            (fn[input] (and (= (:name input) name) (= (:type input) :end-element)))
                                            channel
  )
 )
 (defn arr-select-elem [name]
-   (a-comp (arr-switch-elem name pass-through) block)
+   (arr-switch-elem (a-arr (fn [input] nil)) name pass-through)
   )
 
+
+
+(defn arr-select-path [name & more]
+ (a-comp (arr-select-elem name) (if (empty? more) pass-through (apply arr-select-path more)))
+)
 
 (def-proc arr-attributes [input]
   (let [attrs (:attrs input)]

@@ -10,7 +10,7 @@
   <scm>
     <connection>scm:git:git://github.com//.git</connection>
     <developerConnection>scm:git:ssh://git@github.com//.git</developerConnection>
-    <tag>a93f07e94273cbd50162234bd1b603f5415e84fe</tag>
+    <tag>15e715a0727771c52aecdaa576e6fb4a54b043b1</tag>
     <url>https://github.com//</url>
   </scm>
   <build>
@@ -61,24 +61,19 @@
       <version>1.4.0</version>
     </dependency>
     <dependency>
-      <groupId>clj-oauth</groupId>
-      <artifactId>clj-oauth</artifactId>
-      <version>1.2.10</version>
-    </dependency>
-    <dependency>
       <groupId>net.intensivesystems</groupId>
       <artifactId>conduit</artifactId>
       <version>0.8.1</version>
     </dependency>
     <dependency>
-      <groupId>org.clojars.kjw</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>1.4</version>
-    </dependency>
-    <dependency>
       <groupId>arrows-extra</groupId>
       <artifactId>arrows-extra</artifactId>
       <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>data.xml</artifactId>
+      <version>0.0.6</version>
     </dependency>
   </dependencies>
 </project>

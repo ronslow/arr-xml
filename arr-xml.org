@@ -51,8 +51,8 @@ We implement this with arr-toggle-switch-inclusive
 *** arr-switch-elem
 #+name: arr-switch-elem
 #+begin_src clojure
-(defn arr-switch-elem [default-channel name channel]
- (arr-toggle-switch-inclusive default-channel (fn[input] (and (= (:name input) name) (= (:type input) :start-element)))
+(defn arr-switch-elem [default-channel name channel & more]
+ (arr-toggle-switch-inclusive (if (empty? more) default-channel (apply (partial arr-switch-elem default-channel) more)) (fn[input] (and (= (:name input) name) (= (:type input) :start-element)))
                                            (fn[input] (and (= (:name input) name) (= (:type input) :end-element)))
                                            channel
  )
@@ -73,14 +73,57 @@ Test
 : ;;=> ((#clojure.data.xml.Event{:type :start-element, :name :hello, :attrs {}, :str nil} "ch1clojure.data.xml.Event@e0465d42" "ch1clojure.data.xml.Event@3a8be81a" "ch1clojure.data.xml.Event@85b46f90" "ch1clojure.data.xml.Event@10f73783" "ch1clojure.data.xml.Event@b6b1acab" #clojure.data.xml.Event{:type :start-element, :name :your, :attrs {}, :str nil} #clojure.data.xml.Event{:type :start-element, :name :friendly, :attrs {}, :str nil} #clojure.data.xml.Event{:type :characters, :name nil, :attrs nil, :str "newsagent"} #clojure.data.xml.Event{:type :end-element, :name :friendly, :attrs nil, :str nil} #clojure.data.xml.Event{:type :end-element, :name :your, :attrs nil, :str nil} #clojure.data.xml.Event{:type :end-element, :name :hello, :attrs nil, :str nil}))
 
 *** arr-select-elem
+Here we switch into a nil. The reason we don't switch into a block is so that we can use this with a-all.
+This means that non matching elements fire as a nil
 #+name: arr-select-elem
 #+begin_src clojure
 (defn arr-select-elem [name]
-   (a-comp (arr-switch-elem name pass-through) block)
+   (arr-switch-elem (a-arr (fn [input] nil)) name pass-through)
   )
 
 
 #+end_src
+
+#+RESULTS: arr-select-elem
+=;;=> #'arr-xml.core/arr-select-elem
+==;;=> 
+==;;=> #'arr-xml.core/arr-select-elem
+=Test with a-all
+#+begin_src clojure
+
+(doall (conduit-map (a-comp arr-stream-to-xml-seq (disperse (a-all (arr-select-elem :nice) (arr-select-elem :there))))
+[(java.io.StringReader. "<hello><nice>one</nice><there><this>is</this></there><your><friendly>newsagent</friendly></your></hello>")])) 
+#+end_src
+
+#+RESULTS:
+: ;;=> (((nil nil) (#clojure.data.xml.Event{:type :start-element, :name :nice, :attrs {}, :str nil} nil) (#clojure.data.xml.Event{:type :characters, :name nil, :attrs nil, :str "one"} nil) (#clojure.data.xml.Event{:type :end-element, :name :nice, :attrs nil, :str nil} nil) (nil #clojure.data.xml.Event{:type :start-element, :name :there, :attrs {}, :str nil}) (nil #clojure.data.xml.Event{:type :start-element, :name :this, :attrs {}, :str nil}) (nil #clojure.data.xml.Event{:type :characters, :name nil, :attrs nil, :str "is"}) (nil #clojure.data.xml.Event{:type :end-element, :name :this, :attrs nil, :str nil}) (nil #clojure.data.xml.Event{:type :end-element, :name :there, :attrs nil, :str nil}) (nil nil) (nil nil) (nil nil) (nil nil) (nil nil) (nil nil)))
+
+
+
+*** arr-select-path
+Recursive
+Use: (arr-select-path :first :second :third) returns <third>
+#+name: arr-select-path
+#+begin_src clojure
+
+(defn arr-select-path [name & more]
+ (a-comp (arr-select-elem name) (if (empty? more) pass-through (apply arr-select-path more)))
+)
+
+#+end_src
+
+#+RESULTS: arr-select-path
+: ;;=> #'arr-xml.core/arr-select-path
+
+Test:
+#+begin_src clojure
+(doall (conduit-map (a-comp arr-stream-to-xml-seq (disperse (arr-select-path  :there :this))) [(java.io.StringReader. "<hello><nice>one</nice><there><this>is</this></there><your><friendly>newsagent</friendly></your></hello>")]))
+
+
+#+end_src
+
+#+RESULTS:
+: ;;=> ((nil nil nil nil nil #clojure.data.xml.Event{:type :start-element, :name :this, :attrs {}, :str nil} #clojure.data.xml.Event{:type :characters, :name nil, :attrs nil, :str "is"} #clojure.data.xml.Event{:type :end-element, :name :this, :attrs nil, :str nil} nil nil nil nil nil nil nil))
 
 *** arr-attributes
 Select out the attributes map from start elements
@@ -109,6 +152,8 @@ Fire a seq of characters from the seq of xml
 
 #+end_src
 
+
+
 * The tangle
 
 #+begin_src clojure :tangle src/arr_xml/core.clj :noweb yes
@@ -117,6 +162,7 @@ Fire a seq of characters from the seq of xml
 <<use-conduit>>
 <<arr-switch-elem>>
 <<arr-select-elem>>
+<<arr-select-path>>
 <<arr-attributes>>
 <<arr-characters>>
 <<arr-parsers>>
